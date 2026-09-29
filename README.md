@@ -1,6 +1,6 @@
 # MyCam Studio
 
-A Fastify camera studio based on the supplied `MyCam.html` concept. The original Poe preview is retained as `Original-MyCam.html`; the real app is served from `public/`.
+A Fastify camera studio based on the supplied `MyCam.html` concept. The real app is served from `public/`. The original Poe preview export is kept outside Git as a design reference.
 
 ## Run
 
