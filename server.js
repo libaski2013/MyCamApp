@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
-const data = join(root, 'data');
+const data = process.env.DATA_DIR || join(root, 'data');
 const avatars = join(data, 'avatars');
 const recordings = join(data, 'recordings');
 const dbPath = join(data, 'state.json');
@@ -52,5 +52,5 @@ for(const [kind,dir,key] of [['avatars',avatars,'avatars'],['recordings',recordi
 }
 await app.register(staticPlugin,{root:join(root,'public'),prefix:'/'});
 app.get('/',async(req,reply)=>reply.sendFile('index.html'));
-if(process.env.NODE_ENV!=='test') await app.listen({port:Number(process.env.PORT)||3000,host:process.env.HOST||'127.0.0.1'});
+if(process.env.NODE_ENV!=='test') await app.listen({port:Number(process.env.PORT)||3000,host:process.env.HOST||(process.env.RAILWAY_PROJECT_ID||process.env.RAILWAY_ENVIRONMENT_ID?'::':'127.0.0.1')});
 export default app;

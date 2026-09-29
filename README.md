@@ -37,3 +37,7 @@ The browser cannot register a system wide virtual camera or microphone itself. D
 4. If tracking reports **WebGL unavailable**, enable browser hardware acceleration or use a browser with WebGL. If it reports **Tracking stopped**, capture the exact message for debugging.
 
 The live effect is a 2D photo puppet, with a face-following position, rotation, and simple mouth/blink overlays. It is not a photoreal likeness animation.
+
+## Railway
+
+The server uses Railway's `PORT` and binds to `::` when Railway system variables are present. The health endpoint is `/api/health`. After a successful deployment, the service needs a public domain under **Settings → Networking**; the project dashboard URL is not the app URL. For persistent images and recordings, mount a Railway volume and set `DATA_DIR` to its mount path. Protect a public deployment before uploading personal likenesses: this prototype has no account login yet.
