@@ -40,3 +40,4 @@ let dragging=false;
 canvas.addEventListener('pointerdown',e=>{if(!image||stream&&$('trackFace').checked&&face)return;dragging=true;canvas.setPointerCapture(e.pointerId);canvas.classList.add('dragging')});
 canvas.addEventListener('pointermove',e=>{if(!dragging)return;const rect=canvas.getBoundingClientRect();$('x').value=Math.max(0,Math.min(100,Math.round((e.clientX-rect.left)/rect.width*100)));$('y').value=Math.max(0,Math.min(100,Math.round((e.clientY-rect.top)/rect.height*100)))});
 canvas.addEventListener('pointerup',()=>{if(!dragging)return;dragging=false;canvas.classList.remove('dragging');saveSettings({overlayX:Number($('x').value),overlayY:Number($('y').value)}).catch(e=>say(e.message))});
+draw();
