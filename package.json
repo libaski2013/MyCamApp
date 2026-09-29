@@ -8,7 +8,8 @@
     "dev": "node --watch server.js",
     "test": "node --test",
     "postinstall": "node scripts/setup-assets.mjs",
-    "setup-assets": "node scripts/setup-assets.mjs"
+    "setup-assets": "node scripts/setup-assets.mjs",
+    "launch": "node scripts/launch.mjs"
   },
   "dependencies": {
     "@fastify/multipart": "^9.2.1",

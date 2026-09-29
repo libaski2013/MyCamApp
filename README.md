@@ -11,7 +11,7 @@ npm ci
 npm start
 ```
 
-Open http://127.0.0.1:3000 and grant camera and microphone permissions. On macOS you can run `start-mac.command`; on Windows run `start-windows.bat`. **Open the running app URL, not `Original-MyCam.html`**: that file is only the supplied design reference and its upload control is not functional. Set `PORT` to change the local port. During `npm ci`, a pinned MediaPipe model is downloaded and checked by SHA-256, while WebAssembly files are copied from the installed package. The browser then loads all tracking assets from this local server. If you bind to `HOST=0.0.0.0`, protect the app with authentication and HTTPS before exposing it publicly.
+Open http://127.0.0.1:3000 and grant camera and microphone permissions. On macOS you can run `start-mac.command`; on Windows run `start-windows.bat`. These launchers wait until the server responds, then open the actual URL. If port 3000 is busy, they select the next available port and print it. You can also run `npm run launch`. **Open the running app URL, not `Original-MyCam.html`**: that file is only the supplied design reference and its upload control is not functional. Set `PORT` to change the local port. During `npm ci`, a pinned MediaPipe model is downloaded and checked by SHA-256, while WebAssembly files are copied from the installed package. The browser then loads all tracking assets from this local server. If you bind to `HOST=0.0.0.0`, protect the app with authentication and HTTPS before exposing it publicly.
 
 ## Features
 
