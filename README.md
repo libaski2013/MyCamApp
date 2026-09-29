@@ -16,7 +16,7 @@ Open http://127.0.0.1:3000 and grant camera and microphone permissions. On macOS
 ## Features
 
 - Select a camera and microphone. Choose microphone on/off before starting.
-- Check the visible likeness permission box, choose a PNG, JPEG, or WebP photo (8 MB maximum), and see an immediate preview before starting the camera. Position, resize, or remove it; use the expression preview sliders to check motion.
+- Check the visible likeness permission box, choose a PNG, JPEG, or WebP photo (8 MB maximum), and see an immediate preview before starting the camera. Drag the photo on the canvas to position it, resize or remove it, and use the expression preview sliders to check motion. Save a PNG snapshot when ready.
 - Local face landmark tracking moves and rotates the photo with the user's head and reacts to mouth opening and blinking. Manual positioning and expression preview controls work before camera access and when WebGL tracking is unavailable. A single photo does not animate the whole body or provide photoreal face reenactment.
 - Solid private background by default, with optional original or blurred camera background; mirrored preview and persistent visual settings.
 - Natural, warm, bright, and radio audio EQ plus input gain for saved recordings. This is tone filtering, not identity voice conversion.
