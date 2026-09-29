@@ -3,7 +3,7 @@ import multipart from '@fastify/multipart';
 import staticPlugin from '@fastify/static';
 import { mkdir, readFile, writeFile, rename, unlink, open } from 'node:fs/promises';
 import { join, extname, basename } from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
@@ -15,6 +15,12 @@ const allowedImages = {'image/png':'.png','image/jpeg':'.jpg','image/webp':'.web
 const allowedVideo = {'video/webm':'.webm','video/mp4':'.mp4'};
 const allowedSettings = new Set(['mirror','overlaySize','overlayX','overlayY','cameraId','microphoneId','selectedAvatarId','background']);
 const app = Fastify({logger:true, bodyLimit:20*1024*1024});
+const workerUrl = process.env.GPU_WORKER_URL?.replace(/\/$/,'');
+const workerToken = process.env.GPU_WORKER_TOKEN;
+const studioKey = process.env.STUDIO_ACCESS_KEY;
+const portraitEnabled = !!(workerUrl && workerToken && studioKey?.length>=24 && /^https:\/\//.test(workerUrl));
+const portraitSessions = new Map();
+app.addContentTypeParser('image/jpeg',{parseAs:'buffer',bodyLimit:512*1024},(req,body,done)=>done(null,body));
 await Promise.all([mkdir(avatars,{recursive:true}),mkdir(recordings,{recursive:true})]);
 let state;
 try { state = JSON.parse(await readFile(dbPath,'utf8')); } catch(e) { if(e.code!=='ENOENT') throw e; state = {avatars:[],recordings:[],settings:{mirror:true,overlaySize:35,overlayX:50,overlayY:50,background:'solid'}}; }
@@ -41,6 +47,46 @@ async function upload(req,reply,kind){
   return reply.code(201).send(item);
 }
 app.get('/api/health',async()=>({ok:true}));
+app.get('/api/portrait/capabilities',async()=>({enabled:portraitEnabled,engine:portraitEnabled?'LivePortrait':null,scope:'face-and-head',reason:portraitEnabled?null:'Configure HTTPS GPU_WORKER_URL, GPU_WORKER_TOKEN and STUDIO_ACCESS_KEY (24+ characters) on the server.'}));
+function authorized(req){const submitted=Buffer.from(req.headers['x-studio-key']||'');const expected=Buffer.from(studioKey||'');return portraitEnabled&&submitted.length===expected.length&&timingSafeEqual(submitted,expected)}
+async function callWorker(path,method,body,timeout=20000){
+  const response=await fetch(workerUrl+path,{method,headers:{Authorization:`Bearer ${workerToken}`,...(body?{'Content-Type':'image/jpeg'}:{})},body,signal:AbortSignal.timeout(timeout)});
+  if(!response.ok){const detail=await response.text().catch(()=>"");throw new Error(`GPU worker ${response.status}: ${detail.slice(0,150)}`)}
+  return response;
+}
+app.post('/api/portrait/sessions',async(req,reply)=>{
+  if(!portraitEnabled)return reply.code(503).send({error:'GPU portrait worker is not configured.'});
+  if(!authorized(req))return reply.code(401).send({error:'Enter the studio access key.'});
+  const id=req.headers['x-avatar-id'];
+  const item=state.avatars.find(v=>v.id===id);
+  if(!item||!safeId(id))return reply.code(404).send({error:'Choose a saved portrait first.'});
+  if(!Buffer.isBuffer(req.body)||req.body.length>512*1024)return reply.code(413).send({error:'Send a cropped JPEG portrait under 512 KB.'});
+  const now=Date.now();for(const [key,value] of portraitSessions)if(now-value.last>300000)portraitSessions.delete(key);
+  if(portraitSessions.size>=8)return reply.code(429).send({error:'Too many active portrait sessions.'});
+  try{
+    const result=await (await callWorker('/sessions','POST',req.body,60000)).json();
+    const token=randomUUID();portraitSessions.set(token,{remote:result.sessionId,last:now,busy:false});
+    return {sessionId:token};
+  }catch(e){req.log.error(e);return reply.code(502).send({error:'GPU portrait preparation failed: '+e.message})}
+});
+app.post('/api/portrait/sessions/:token/frame',async(req,reply)=>{
+  if(!authorized(req))return reply.code(401).send({error:'Invalid studio access key.'});
+  const session=portraitSessions.get(req.params.token);
+  if(!session||Date.now()-session.last>300000)return reply.code(404).send({error:'Portrait session expired. Start it again.'});
+  if(!Buffer.isBuffer(req.body)||req.body.length>512*1024)return reply.code(413).send({error:'Send a JPEG camera frame under 512 KB.'});
+  if(session.busy)return reply.code(429).send({error:'Previous frame is still rendering.'});
+  session.busy=true;session.last=Date.now();
+  try{const response=await callWorker(`/sessions/${encodeURIComponent(session.remote)}/frame`,'POST',req.body);
+    reply.header('Content-Type','image/jpeg').header('Cache-Control','no-store');return reply.send(Buffer.from(await response.arrayBuffer()));
+  }catch(e){req.log.error(e);return reply.code(502).send({error:'GPU frame failed: '+e.message})}
+  finally{session.busy=false}
+});
+app.delete('/api/portrait/sessions/:token',async(req,reply)=>{
+  if(!authorized(req))return reply.code(401).send({error:'Invalid studio access key.'});
+  const session=portraitSessions.get(req.params.token);portraitSessions.delete(req.params.token);
+  if(session&&portraitEnabled)await callWorker(`/sessions/${encodeURIComponent(session.remote)}`,'DELETE',undefined,5000).catch(()=>{});
+  return {ok:true};
+});
 app.get('/api/state',async()=>state);
 app.patch('/api/settings',async(req,reply)=>{const body=req.body;if(!body||typeof body!=='object'||Array.isArray(body)) return reply.code(400).send({error:'Invalid settings'});for(const [key,value] of Object.entries(body)){if(!allowedSettings.has(key))return reply.code(400).send({error:`Unknown setting: ${key}`});if(['overlaySize','overlayX','overlayY'].includes(key)&&(!Number.isFinite(value)||value<0||value>100))return reply.code(400).send({error:`Invalid ${key}`});if(key==='background'&&!['original','blur','solid'].includes(value))return reply.code(400).send({error:'Invalid background'});if(key==='mirror'&&typeof value!=='boolean')return reply.code(400).send({error:'Invalid mirror'});if(['cameraId','microphoneId','selectedAvatarId'].includes(key)&&typeof value!=='string')return reply.code(400).send({error:`Invalid ${key}`});}Object.assign(state.settings,body);await save();return state.settings;});
 app.post('/api/avatars',async(req,reply)=>upload(req,reply,'avatar'));

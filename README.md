@@ -41,3 +41,7 @@ The live effect is a still 2D photo overlay with optional face-following positio
 ## Railway
 
 The server uses Railway's `PORT` and binds to `::` when Railway system variables are present. The health endpoint is `/api/health`. After a successful deployment, the service needs a public domain under **Settings → Networking**; the project dashboard URL is not the app URL. For persistent images and recordings, mount a Railway volume and set `DATA_DIR` to its mount path. Protect a public deployment before uploading personal likenesses: this prototype has no account login yet.
+
+## Hosted GPU portrait animation
+
+The optional [Runpod GPU worker setup](GPU-SETUP.md) adds LivePortrait face and head reenactment from camera frames. The Fastify server proxies the portrait and frames to the worker with a secret token; the browser never receives that token. Configure `GPU_WORKER_URL`, `GPU_WORKER_TOKEN`, and `STUDIO_ACCESS_KEY` on Railway, then enter the studio key in the app. The existing 2D overlay remains available when no worker is configured. This is an integration implementation; GPU image build, model inference, latency, and visual quality require testing on a real Pod.
