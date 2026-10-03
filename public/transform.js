@@ -6,11 +6,11 @@ export function mountTransformation({getStream,startCamera,stopPortrait,getRefer
   const progress=$('transformProgress'),progressText=$('transformProgressText'),resume=$('resumePlayback');
   const showProgress=message=>{progress.hidden=false;progressText.textContent=message;status.textContent=message;setDiagnostic(message)};
   let frames=0,lastFrameAt=0,frameCallback=null,watchdog=null,referenceApplied=false;
-  let stage='Initialization',session=null,epoch=0,timer=null,limit=null,frameLimit=null,ready=false;
+  let stage='Initialization',session=null,epoch=0,timer=null,limit=null,frameLimit=null,ready=false,inputTracks=[];
   const clearOutput=()=>{output.pause();output.srcObject=null;output.hidden=true;resume.hidden=true;setOutput(null)};
   async function end(message='Transformation stopped.') {
     epoch++;clearInterval(watchdog);watchdog=null;if(frameCallback!==null)output.cancelVideoFrameCallback?.(frameCallback);frameCallback=null;referenceApplied=false;clearInterval(timer);clearTimeout(limit);clearTimeout(frameLimit);timer=limit=frameLimit=null;
-    const current=session;session=null;current?.disconnect();clearOutput();setMode(false);
+    const current=session;session=null;current?.disconnect();inputTracks.forEach(track=>track.stop());inputTracks=[];clearOutput();setMode(false);
     start.disabled=!ready;stop.disabled=true;$('transformTime').textContent='';if(message==='Transformation stopped.'){progress.hidden=true;status.textContent=message}else showProgress(message);
   }
   registerStop(()=>end());stop.onclick=()=>end();
@@ -41,7 +41,8 @@ export function mountTransformation({getStream,startCamera,stopPortrait,getRefer
       setDiagnostic(`Connecting to ${token.model} with ${reference?'selected character photo':'text instructions'}.`);
       const model=models.realtime(token.model);
       await camera.getVideoTracks()[0].applyConstraints({width:{ideal:model.width},height:{ideal:model.height},frameRate:model.fps}).catch(()=>{});
-      const connected=await client.realtime.connect(new MediaStream(camera.getVideoTracks()),{
+      inputTracks=camera.getVideoTracks().map(track=>track.clone());
+      const connected=await client.realtime.connect(new MediaStream(inputTracks),{
         model,initialState:editState,
         onRemoteStream:remote=>{
           if(attempt!==epoch)return;
@@ -61,7 +62,7 @@ export function mountTransformation({getStream,startCamera,stopPortrait,getRefer
       session=connected;stage='Applying character reference';showProgress('Applying character photo and transformation instructions…');
       connected.on('error',error=>{if(attempt===epoch)end(transformationError(error,stage))});
       await applyCharacter(connected,editState);if(attempt!==epoch)return;referenceApplied=true;stage='Receiving AI video';if(lastFrameAt){progress.hidden=true;status.textContent='Live AI video playing'}else showProgress('Character applied. Waiting for decoded AI video frames…');
-      clearTimeout(limit);if(!lastFrameAt)frameLimit=setTimeout(()=>end('AI connected but no video arrived. Check Decart credits and network, then reconnect.'),30000);
+      clearTimeout(limit);if(!lastFrameAt)frameLimit=setTimeout(()=>end('AI connected but no decoded video frames arrived. This is a video delivery timeout, not a confirmed credit error.'),30000);
       connected.on('connectionChange',state=>{if(attempt===epoch&&state==='disconnected')end('AI connection ended. Click Execute to reconnect.')});
       const deadline=Date.now()+token.maxSessionDuration*1000;
       timer=setInterval(()=>{$('transformTime').textContent=`Session time remaining: ${Math.max(0,Math.ceil((deadline-Date.now())/1000))} seconds`},1000);
