@@ -2,9 +2,9 @@ import { characterState, applyCharacter, transformationError } from '/character-
 import { authenticateStudio } from '/studio-auth.js';
 export function mountTransformation({getStream,startCamera,stopPortrait,getReference,hasConsent,setOutput,setMode,setDiagnostic,registerStop}) {
   const $=id=>document.getElementById(id),status=$('transformStatus'),start=$('transformStart'),stop=$('transformStop');
-  const output=document.createElement('video');output.muted=true;output.autoplay=true;output.playsInline=true;
+  const output=$('aiVideo');output.muted=true;output.autoplay=true;output.playsInline=true;
   let stage='Initialization',session=null,epoch=0,timer=null,limit=null,frameLimit=null,ready=false;
-  const clearOutput=()=>{output.pause();output.srcObject=null;setOutput(null)};
+  const clearOutput=()=>{output.pause();output.srcObject=null;output.hidden=true;$('aiVideoLabel').hidden=true;setOutput(null)};
   async function end(message='Transformation stopped.') {
     epoch++;clearInterval(timer);clearTimeout(limit);clearTimeout(frameLimit);timer=limit=frameLimit=null;
     const current=session;session=null;current?.disconnect();clearOutput();setMode(false);
@@ -38,7 +38,7 @@ export function mountTransformation({getStream,startCamera,stopPortrait,getRefer
       setDiagnostic(`Connecting to ${token.model} with ${reference?'selected character photo':'text instructions'}.`);
       const connected=await client.realtime.connect(new MediaStream(camera.getVideoTracks()),{
         model:models.realtime(token.model),initialState:editState,
-        onRemoteStream:remote=>{if(attempt!==epoch)return;output.srcObject=remote;setOutput(output);output.onloadeddata=()=>{if(attempt!==epoch)return;clearTimeout(frameLimit);status.textContent='Live AI video received. Test your expressions and movements.';setDiagnostic(status.textContent)};output.play().catch(()=>{status.textContent='Click Execute again if the output does not play.'})}
+        onRemoteStream:remote=>{if(attempt!==epoch)return;output.srcObject=remote;output.hidden=false;$('aiVideoLabel').hidden=false;setOutput(output);output.onloadeddata=()=>{if(attempt!==epoch)return;clearTimeout(frameLimit);status.textContent='Live AI video received. Test your expressions and movements.';setDiagnostic(status.textContent)};output.play().catch(()=>{status.textContent='Click Execute again if the output does not play.'})}
       });
       if(attempt!==epoch){connected.disconnect();return}
       session=connected;stage='Applying character reference';status.textContent='AI connected. Confirming character reference…';
