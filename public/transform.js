@@ -1,3 +1,4 @@
+import { characterState } from '/character-state.js';
 import { authenticateStudio } from '/studio-auth.js';
 export function mountTransformation({getStream,startCamera,stopPortrait,getReference,hasConsent,setOutput,setMode,registerStop}) {
   const $=id=>document.getElementById(id),status=$('transformStatus'),start=$('transformStart'),stop=$('transformStop');
@@ -14,8 +15,8 @@ export function mountTransformation({getStream,startCamera,stopPortrait,getRefer
     if(!hasConsent()){status.textContent='Check the image permission box first.';return}
     const reference=$('transformReference').checked?getReference():null;
     if($('transformReference').checked&&!reference){status.textContent='Choose and save a character photo first.';return}
-    const prompt=$('transformPrompt').value.trim()||(reference?'Transform the person into the character in the reference image. Preserve their live movement and expressions.':'');
-    if(!prompt){status.textContent='Enter transformation instructions.';return}
+    const prompt=$('transformPrompt').value.trim();
+    if(!reference&&!prompt){status.textContent='Enter transformation instructions.';return}
     await end();await stopPortrait();const attempt=++epoch;start.disabled=true;stop.disabled=false;
     status.textContent='Starting camera…';setMode(true,'Connecting to live AI…');
     try{
@@ -26,15 +27,15 @@ export function mountTransformation({getStream,startCamera,stopPortrait,getRefer
       let image;
       if(reference){const res=await fetch(reference.url);if(!res.ok)throw Error('Cannot load the selected character photo.');image=new File([await res.blob()],reference.name,{type:reference.mime})}
       if(attempt!==epoch)return;
-      status.textContent='Authorizing live transformation…';
+      status.textContent='Authorizing live transformation…';setMode(true,'Preparing your stream…');
       const response=await fetch('/api/transform/token',{method:'POST',signal:AbortSignal.timeout(20000)});
       const token=await response.json();if(!response.ok)throw Error(token.error||'Session authorization failed.');
       if(attempt!==epoch)return;
-      status.textContent='Connecting to live AI…';
+      status.textContent='Connecting to live AI…';setMode(true,'Preparing the character stream…');
       limit=setTimeout(()=>end('Connection timed out. Check your network and Decart credits, then try again.'),45000);
       const client=createDecartClient({apiKey:token.apiKey});
       const connected=await client.realtime.connect(new MediaStream(camera.getVideoTracks()),{
-        model:models.realtime(token.model),initialState:{prompt:{text:prompt,enhance:true},...(image?{image}:{})},
+        model:models.realtime(token.model),initialState:characterState({image,instructions:prompt}),
         onRemoteStream:remote=>{if(attempt!==epoch)return;output.srcObject=remote;setOutput(output);output.onloadeddata=()=>{if(attempt!==epoch)return;clearTimeout(frameLimit);status.textContent='Live AI video received. Test your expressions and movements.'};output.play().catch(()=>{status.textContent='Click Execute again if the output does not play.'})}
       });
       if(attempt!==epoch){connected.disconnect();return}
