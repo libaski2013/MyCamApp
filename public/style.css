@@ -7,3 +7,5 @@
 .quickstart{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#103044;border:1px solid #27627d;border-radius:12px;padding:10px 14px;margin-bottom:18px;color:#d9f7ff;font-size:12px}.quickstart strong{font-size:13px}.quickstart span{flex:1;min-width:220px}.quickstart button{padding:7px 10px;background:#116789}.frame canvas.previewing{cursor:grab}.frame canvas.dragging{cursor:grabbing}
 
 .card textarea{box-sizing:border-box;width:100%;padding:12px;margin-top:8px;border:1px solid #3b4e68;border-radius:8px;background:#203149;color:#e9eef7;resize:vertical;font:inherit}
+
+.source-preview{position:absolute;bottom:14px;right:14px;width:25%;min-width:130px;max-width:260px;z-index:3;border:2px solid #51cbe7;border-radius:10px;overflow:hidden;background:#101927;box-shadow:0 3px 16px #0009}.frame .source-preview video{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;transform:scaleX(-1)}.source-preview span{display:block;padding:5px 7px;font-size:10px;color:#d1f5ff}.frame .source-preview video.unmirrored{transform:none}

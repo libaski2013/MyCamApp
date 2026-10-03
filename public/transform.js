@@ -1,11 +1,11 @@
-export function mountTransformation({getStream,startCamera,stopPortrait,getReference,hasConsent,setOutput,registerStop}) {
+export function mountTransformation({getStream,startCamera,stopPortrait,getReference,hasConsent,setOutput,setMode,registerStop}) {
   const $=id=>document.getElementById(id),status=$('transformStatus'),start=$('transformStart'),stop=$('transformStop');
   const output=document.createElement('video');output.muted=true;output.autoplay=true;output.playsInline=true;
-  let session=null,epoch=0,timer=null,limit=null,ready=false;
+  let session=null,epoch=0,timer=null,limit=null,frameLimit=null,ready=false;
   const clearOutput=()=>{output.pause();output.srcObject=null;setOutput(null)};
   async function end(message='Transformation stopped.') {
-    epoch++;clearInterval(timer);clearTimeout(limit);timer=limit=null;
-    const current=session;session=null;current?.disconnect();clearOutput();
+    epoch++;clearInterval(timer);clearTimeout(limit);clearTimeout(frameLimit);timer=limit=frameLimit=null;
+    const current=session;session=null;current?.disconnect();clearOutput();setMode(false);
     start.disabled=!ready;stop.disabled=true;$('transformTime').textContent='';status.textContent=message;
   }
   registerStop(()=>end());stop.onclick=()=>end();
@@ -17,7 +17,7 @@ export function mountTransformation({getStream,startCamera,stopPortrait,getRefer
     const prompt=$('transformPrompt').value.trim()||(reference?'Transform the person into the character in the reference image. Preserve their live movement and expressions.':'');
     if(!prompt){status.textContent='Enter transformation instructions.';return}
     await end();await stopPortrait();const attempt=++epoch;start.disabled=true;stop.disabled=false;
-    status.textContent='Starting camera…';
+    status.textContent='Starting camera…';setMode(true,'Connecting to live AI…');
     try{
       if(!getStream())await startCamera();if(attempt!==epoch)return;
       const camera=getStream();if(!camera?.getVideoTracks().some(t=>t.readyState==='live'))throw Error('Camera is unavailable. Start it and allow camera access.');
@@ -34,10 +34,10 @@ export function mountTransformation({getStream,startCamera,stopPortrait,getRefer
       const client=createDecartClient({apiKey:token.apiKey});
       const connected=await client.realtime.connect(new MediaStream(camera.getVideoTracks()),{
         model:models.realtime(token.model),initialState:{prompt:{text:prompt,enhance:true},...(image?{image}:{})},
-        onRemoteStream:remote=>{if(attempt!==epoch)return;output.srcObject=remote;setOutput(output);output.play().catch(()=>{status.textContent='Click Execute again if the output does not play.'})}
+        onRemoteStream:remote=>{if(attempt!==epoch)return;output.srcObject=remote;setOutput(output);output.onloadeddata=()=>{if(attempt!==epoch)return;clearTimeout(frameLimit);status.textContent='Live AI video received. Test your expressions and movements.'};output.play().catch(()=>{status.textContent='Click Execute again if the output does not play.'})}
       });
       if(attempt!==epoch){connected.disconnect();return}
-      session=connected;clearTimeout(limit);status.textContent='Live AI transformation active.';
+      session=connected;clearTimeout(limit);status.textContent=output.readyState>=2?'Live AI video received. Test your expressions and movements.':'AI connected. Waiting for transformed video…';if(output.readyState<2)frameLimit=setTimeout(()=>end('AI connected but no video arrived. Check Decart credits and network, then reconnect.'),30000);
       connected.on('error',()=>{if(attempt===epoch)end('Live AI error. Check Decart credits and network, then try again.')});
       connected.on('connectionChange',state=>{if(attempt===epoch&&state==='disconnected')end('AI connection ended. Click Execute to reconnect.')});
       const deadline=Date.now()+token.maxSessionDuration*1000;
