@@ -3,7 +3,7 @@ import multipart from '@fastify/multipart';
 import staticPlugin from '@fastify/static';
 import { mkdir, readFile, writeFile, rename, unlink, open } from 'node:fs/promises';
 import { join, extname, basename } from 'node:path';
-import { randomUUID, timingSafeEqual } from 'node:crypto';
+import { randomUUID, timingSafeEqual, createHmac } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
@@ -48,7 +48,25 @@ async function upload(req,reply,kind){
 }
 app.get('/api/health',async()=>({ok:true}));
 app.get('/api/portrait/capabilities',async()=>({enabled:portraitEnabled,engine:portraitEnabled?'LivePortrait':null,scope:'face-and-head',reason:portraitEnabled?null:'Configure HTTPS GPU_WORKER_URL, GPU_WORKER_TOKEN and STUDIO_ACCESS_KEY (24+ characters) on the server.'}));
-function authorized(req){const submitted=Buffer.from(req.headers['x-studio-key']||'');const expected=Buffer.from(studioKey||'');return portraitEnabled&&submitted.length===expected.length&&timingSafeEqual(submitted,expected)}
+const sessionAge=30*24*60*60;
+const same=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y)};
+const signSession=value=>createHmac('sha256',studioKey||'').update(value).digest('base64url');
+function validSession(req){
+  if(!studioKey||studioKey.length<24)return false;
+  const raw=(req.headers.cookie||'').split(';').map(v=>v.trim()).find(v=>v.startsWith('mycam_session='))?.slice(14)||'';
+  const [expiry,nonce,signature]=raw.split('.');
+  return /^\d+$/.test(expiry||'')&&Number(expiry)>Date.now()&&Number(expiry)<=Date.now()+sessionAge*1000&&!!nonce&&!!signature&&same(signature,signSession(expiry+'.'+nonce));
+}
+function authorized(req){return validSession(req)||!!(studioKey?.length>=24&&same(req.headers['x-studio-key']||'',studioKey))}
+const cookieFlags=()=>'; Path=/; HttpOnly; SameSite=Strict'+(process.env.APP_ORIGIN?.startsWith('https:')||process.env.RAILWAY_PROJECT_ID?'; Secure':'');
+app.get('/api/studio/session',async(req,reply)=>{reply.header('Cache-Control','no-store');return {authenticated:validSession(req)}});
+app.post('/api/studio/session',async(req,reply)=>{
+  reply.header('Cache-Control','no-store');
+  if(!studioKey||studioKey.length<24||!same(req.headers['x-studio-key']||'',studioKey))return reply.code(401).send({error:'Enter the correct studio access key.'});
+  const value=(Date.now()+sessionAge*1000)+'.'+randomUUID();
+  reply.header('Set-Cookie','mycam_session='+value+'.'+signSession(value)+'; Max-Age='+sessionAge+cookieFlags());return {authenticated:true};
+});
+app.delete('/api/studio/session',async(req,reply)=>{reply.header('Set-Cookie','mycam_session=; Max-Age=0'+cookieFlags()).header('Cache-Control','no-store');return {authenticated:false}});
 async function callWorker(path,method,body,timeout=20000){
   const response=await fetch(workerUrl+path,{method,headers:{Authorization:`Bearer ${workerToken}`,...(body?{'Content-Type':'image/jpeg'}:{})},body,signal:AbortSignal.timeout(timeout)});
   if(!response.ok){const detail=await response.text().catch(()=>"");throw new Error(`GPU worker ${response.status}: ${detail.slice(0,150)}`)}
@@ -94,8 +112,7 @@ app.get('/api/transform/capabilities',async()=>({enabled:decartEnabled,model:dec
 app.post('/api/transform/token',async(req,reply)=>{
   reply.header('Cache-Control','no-store');
   if(!decartEnabled)return reply.code(503).send({error:'Live transformation is not configured. Set DECART_API_KEY and STUDIO_ACCESS_KEY in Railway.'});
-  const submitted=Buffer.from(req.headers['x-studio-key']||'');const expected=Buffer.from(studioKey);
-  if(submitted.length!==expected.length||!timingSafeEqual(submitted,expected))return reply.code(401).send({error:'Enter the correct studio access key.'});
+  if(!authorized(req))return reply.code(401).send({error:'Enter the correct studio access key.'});
   const now=Date.now();for(const [ip,times] of tokenRequests){const recent=times.filter(t=>now-t<60000);if(recent.length)tokenRequests.set(ip,recent);else tokenRequests.delete(ip)}
   const attempts=tokenRequests.get(req.ip)||[];
   if(attempts.length>=5)return reply.code(429).send({error:'Too many starts. Wait one minute.'});

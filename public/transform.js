@@ -1,3 +1,4 @@
+import { authenticateStudio } from '/studio-auth.js';
 export function mountTransformation({getStream,startCamera,stopPortrait,getReference,hasConsent,setOutput,setMode,registerStop}) {
   const $=id=>document.getElementById(id),status=$('transformStatus'),start=$('transformStart'),stop=$('transformStop');
   const output=document.createElement('video');output.muted=true;output.autoplay=true;output.playsInline=true;
@@ -11,7 +12,6 @@ export function mountTransformation({getStream,startCamera,stopPortrait,getRefer
   registerStop(()=>end());stop.onclick=()=>end();
   start.onclick=async()=>{
     if(!hasConsent()){status.textContent='Check the image permission box first.';return}
-    if(!$('transformKey').value){status.textContent='Enter your studio access key.';return}
     const reference=$('transformReference').checked?getReference():null;
     if($('transformReference').checked&&!reference){status.textContent='Choose and save a character photo first.';return}
     const prompt=$('transformPrompt').value.trim()||(reference?'Transform the person into the character in the reference image. Preserve their live movement and expressions.':'');
@@ -19,6 +19,7 @@ export function mountTransformation({getStream,startCamera,stopPortrait,getRefer
     await end();await stopPortrait();const attempt=++epoch;start.disabled=true;stop.disabled=false;
     status.textContent='Starting camera…';setMode(true,'Connecting to live AI…');
     try{
+      await authenticateStudio($('transformKey'));if(attempt!==epoch)return;
       if(!getStream())await startCamera();if(attempt!==epoch)return;
       const camera=getStream();if(!camera?.getVideoTracks().some(t=>t.readyState==='live'))throw Error('Camera is unavailable. Start it and allow camera access.');
       const {createDecartClient,models}=await import('/vendor/decart.mjs');
@@ -26,7 +27,7 @@ export function mountTransformation({getStream,startCamera,stopPortrait,getRefer
       if(reference){const res=await fetch(reference.url);if(!res.ok)throw Error('Cannot load the selected character photo.');image=new File([await res.blob()],reference.name,{type:reference.mime})}
       if(attempt!==epoch)return;
       status.textContent='Authorizing live transformation…';
-      const response=await fetch('/api/transform/token',{method:'POST',headers:{'X-Studio-Key':$('transformKey').value},signal:AbortSignal.timeout(20000)});
+      const response=await fetch('/api/transform/token',{method:'POST',signal:AbortSignal.timeout(20000)});
       const token=await response.json();if(!response.ok)throw Error(token.error||'Session authorization failed.');
       if(attempt!==epoch)return;
       status.textContent='Connecting to live AI…';
