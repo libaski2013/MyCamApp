@@ -45,4 +45,4 @@ canvas.addEventListener('pointerup',()=>{if(!dragging)return;dragging=false;canv
 draw();
 
 import { mountTransformation } from '/transform.js';
-mountTransformation({getStream:()=>stream,startCamera:start,stopPortrait,getReference:()=>state?.avatars.find(a=>a.id===selected),hasConsent:()=>$('consent').checked,setMode:(active,message)=>{transformMode=active;transformMessage=message||'';$('status').textContent=active?'AI connecting':stream?'Camera live':'Photo preview'},setOutput:v=>{transformedVideo=v;if(v)$('status').textContent='AI video received'},registerStop:fn=>{transformStopHandler=fn}});
+mountTransformation({getStream:()=>stream,startCamera:start,stopPortrait,getReference:()=>state?.avatars.find(a=>a.id===selected),hasConsent:()=>$('consent').checked,setDiagnostic:message=>say(message),setMode:(active,message)=>{transformMode=active;transformMessage=message||'';$('status').textContent=active?'AI connecting':stream?'Camera live':'Photo preview'},setOutput:v=>{transformedVideo=v;if(v)$('status').textContent='AI video received'},registerStop:fn=>{transformStopHandler=fn}});
