@@ -87,6 +87,27 @@ app.delete('/api/portrait/sessions/:token',async(req,reply)=>{
   if(session&&portraitEnabled)await callWorker(`/sessions/${encodeURIComponent(session.remote)}`,'DELETE',undefined,5000).catch(()=>{});
   return {ok:true};
 });
+const decartModel = process.env.DECART_MODEL || 'lucy-2.5';
+const decartEnabled = !!(process.env.DECART_API_KEY && studioKey?.length >= 24);
+const tokenRequests = new Map();
+app.get('/api/transform/capabilities',async()=>({enabled:decartEnabled,model:decartModel,reason:decartEnabled?null:'Set DECART_API_KEY and STUDIO_ACCESS_KEY (24+ characters) in Railway.'}));
+app.post('/api/transform/token',async(req,reply)=>{
+  reply.header('Cache-Control','no-store');
+  if(!decartEnabled)return reply.code(503).send({error:'Live transformation is not configured. Set DECART_API_KEY and STUDIO_ACCESS_KEY in Railway.'});
+  const submitted=Buffer.from(req.headers['x-studio-key']||'');const expected=Buffer.from(studioKey);
+  if(submitted.length!==expected.length||!timingSafeEqual(submitted,expected))return reply.code(401).send({error:'Enter the correct studio access key.'});
+  const now=Date.now();for(const [ip,times] of tokenRequests){const recent=times.filter(t=>now-t<60000);if(recent.length)tokenRequests.set(ip,recent);else tokenRequests.delete(ip)}
+  const attempts=tokenRequests.get(req.ip)||[];
+  if(attempts.length>=5)return reply.code(429).send({error:'Too many starts. Wait one minute.'});
+  attempts.push(now);tokenRequests.set(req.ip,attempts);
+  try{
+    const {createDecartClient}=await import('@decartai/sdk');
+    const client=createDecartClient({apiKey:process.env.DECART_API_KEY});
+    const origin=process.env.APP_ORIGIN || (req.headers.origin ? new URL(req.headers.origin).origin : undefined);
+    const token=await client.tokens.create({expiresIn:120,allowedModels:[decartModel],...(origin?{allowedOrigins:[origin]}:{}),constraints:{realtime:{maxSessionDuration:300}}});
+    return {apiKey:token.apiKey,expiresAt:token.expiresAt,model:decartModel,maxSessionDuration:300};
+  }catch{return reply.code(502).send({error:'Decart could not create a session. Check the API key, model access and credits in the Decart dashboard.'})}
+});
 app.get('/api/state',async()=>state);
 app.patch('/api/settings',async(req,reply)=>{const body=req.body;if(!body||typeof body!=='object'||Array.isArray(body)) return reply.code(400).send({error:'Invalid settings'});for(const [key,value] of Object.entries(body)){if(!allowedSettings.has(key))return reply.code(400).send({error:`Unknown setting: ${key}`});if(['overlaySize','overlayX','overlayY'].includes(key)&&(!Number.isFinite(value)||value<0||value>100))return reply.code(400).send({error:`Invalid ${key}`});if(key==='background'&&!['original','blur','solid'].includes(value))return reply.code(400).send({error:'Invalid background'});if(key==='mirror'&&typeof value!=='boolean')return reply.code(400).send({error:'Invalid mirror'});if(['cameraId','microphoneId','selectedAvatarId'].includes(key)&&typeof value!=='string')return reply.code(400).send({error:`Invalid ${key}`});}Object.assign(state.settings,body);await save();return state.settings;});
 app.post('/api/avatars',async(req,reply)=>upload(req,reply,'avatar'));
