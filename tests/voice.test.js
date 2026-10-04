@@ -11,8 +11,8 @@ test('recorded voice conversion produces video and deletes temporary clone with 
  const wav=join(data,'sample.wav'),source=join(recordings,'recording.webm');
  await runMedia(['-y','-f','lavfi','-i','sine=frequency=440:duration=6','-ac','1','-ar','22050',wav]);
  await runMedia(['-y','-f','lavfi','-i','color=c=blue:s=160x90:d=2','-f','lavfi','-i','sine=frequency=440:duration=2','-c:v','libvpx','-c:a','libopus','-shortest',source]);
- const oldKey=process.env.ELEVENLABS_API_KEY;process.env.ELEVENLABS_API_KEY='voice-test-secret';const oldFetch=globalThis.fetch;let deletes=0,deleteFails=true;
- globalThis.fetch=async(url,opts)=>{assert.equal(opts.headers['xi-api-key'],'voice-test-secret');if(opts.method==='DELETE'){deletes++;return new Response('',{status:deleteFails?503:200})}if(String(url).endsWith('voices/add')){assert.ok(opts.body.get('files') instanceof Blob);return Response.json({voice_id:'provider-voice',requires_verification:false})}assert.match(String(url),/speech-to-speech/);assert.equal(opts.body.get('model_id'),'eleven_multilingual_sts_v2');return new Response(await readFile(wav),{headers:{'Content-Type':'audio/mpeg'}})};
+ const oldKey=process.env.ELEVENLABS_API_KEY;process.env.ELEVENLABS_API_KEY='voice-test-secret';const oldFetch=globalThis.fetch;let deletes=0,deleteFails=true,conversionFails=false;
+ globalThis.fetch=async(url,opts)=>{assert.equal(opts.headers['xi-api-key'],'voice-test-secret');if(opts.method==='DELETE'){deletes++;return new Response('',{status:deleteFails?503:200})}if(String(url).endsWith('voices/add')){assert.ok(opts.body.get('files') instanceof Blob);return Response.json({voice_id:'provider-voice',requires_verification:false})}assert.match(String(url),/speech-to-speech/);if(conversionFails)return new Response('',{status:503});assert.equal(opts.body.get('model_id'),'eleven_multilingual_sts_v2');return new Response(await readFile(wav),{headers:{'Content-Type':'audio/mpeg'}})};
  const app=Fastify();await app.register(multipart);await registerVoices(app,{data,recordings,state:{recordings:[{id:'recording',mime:'video/webm'}]},save:async()=>{},authorized:r=>r.headers['x-test']==='admin'});
  try{
   assert.equal((await app.inject('/api/voice/library')).statusCode,401);
@@ -27,5 +27,11 @@ test('recorded voice conversion produces video and deletes temporary clone with 
   assert.deepEqual(await readdir(join(data,'voice-work')),[]);
   assert.equal(library.jobs[0].voiceCleanup,'deleted');
   const removed=await app.inject({method:'DELETE',url:'/api/voice/jobs/'+job.id,headers:{'x-test':'admin'}});assert.equal(removed.statusCode,200);assert.equal((await app.inject({url:job.url,headers:{'x-test':'admin'}})).statusCode,404);assert.deepEqual(await readdir(join(data,'voice-videos')),[]);
+  conversionFails=true;
+  const failedVoice=(await app.inject({method:'POST',url:'/api/voice/library?name=Failed&mode=temporary&consent=true',headers:{'x-test':'admin','content-type':'multipart/form-data; boundary='+boundary},payload})).json();
+  const failedJob=(await app.inject({method:'POST',url:'/api/voice/jobs',headers:{'x-test':'admin'},payload:{voiceId:failedVoice.id,recordingId:'recording'}})).json();
+  let failed;for(let i=0;i<200;i++){failed=(await app.inject({url:'/api/voice/jobs/'+failedJob.id,headers:{'x-test':'admin'}})).json();if(failed.status==='failed'&&failed.voiceCleanup)break;await new Promise(r=>setTimeout(r,20))}
+  assert.equal(failed.status,'failed');assert.equal(failed.voiceCleanup,'deleted');assert.equal((await app.inject({url:'/api/voice/library',headers:{'x-test':'admin'}})).json().voices.length,0);
+
  }finally{await app.close();globalThis.fetch=oldFetch;if(oldKey===undefined)delete process.env.ELEVENLABS_API_KEY;else process.env.ELEVENLABS_API_KEY=oldKey;await rm(data,{recursive:true,force:true})}
 });
