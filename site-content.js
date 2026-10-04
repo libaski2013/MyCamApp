@@ -4,6 +4,11 @@ import {randomUUID} from 'node:crypto';
 export async function registerSiteContent(app,{data,admin,defaults}){
  const dir=join(data,'site-media'),path=join(data,'site-content.json');await mkdir(dir,{recursive:true});
  let content;try{content=JSON.parse(await readFile(path,'utf8'))}catch(e){if(e.code!=='ENOENT')throw e;content=structuredClone(defaults)}
+ // Convert legacy USD settings once; GHS values are never reconverted.
+ if(content.packages.some(p=>p.ghs===undefined&&Number.isFinite(p.usd))){
+  content={...content,currency:'GHS',conversion:defaults.conversion,packages:content.packages.map(p=>{const {usd,...rest}=p;return {...rest,ghs:p.ghs??Math.round(usd*11.71*100)/100}}),texts:content.texts.map(f=>f.value==="Indicative prices for standard AI video. Voice, final GHS prices and purchase activation will be confirmed before checkout. No payment is collected today."?{...f,value:"Estimated Ghana cedi prices for standard AI video. Voice pricing and purchase activation will be confirmed before checkout. No payment is collected today."}:f)};
+  await writeFile(path+'.migration',JSON.stringify(content),{mode:0o600});await rename(path+'.migration',path);
+ }
  let queue=Promise.resolve();
  async function persist(next){queue=queue.catch(()=>{}).then(async()=>{await writeFile(path+'.tmp',JSON.stringify(next),{mode:0o600});await rename(path+'.tmp',path);content=next});await queue}
  app.addHook('preHandler',async(req,reply)=>{if(!req.url.startsWith('/api/site/'))return;reply.header('Cache-Control','no-store');if(req.method!=='GET'&&req.method!=='HEAD'){if(!admin(req))return reply.code(401).send({error:'Admin login required.'});if(req.headers.origin){const expected=process.env.APP_ORIGIN?new URL(process.env.APP_ORIGIN).origin:null;const origin=new URL(req.headers.origin);if(expected?origin.origin!==expected:origin.host!==req.headers.host)return reply.code(403).send({error:'Request origin is not allowed.'})}}});
@@ -12,9 +17,9 @@ export async function registerSiteContent(app,{data,admin,defaults}){
   const b=req.body;
   if(!b||!Array.isArray(b.texts)||b.texts.length!==defaults.texts.length||!Array.isArray(b.packages)||b.packages.length!==3||!b.videos)return reply.code(400).send({error:'Invalid site settings.'});
   const texts=[];for(const f of defaults.texts){const v=b.texts.find(x=>x.id===f.id);if(!v||typeof v.value!=='string'||v.value.length>4000)return reply.code(400).send({error:'Invalid text: '+f.label});texts.push({...f,value:v.value})}
-  const packages=[];for(const original of defaults.packages){const p=b.packages.find(x=>x.id===original.id);if(!p||typeof p.name!=='string'||!p.name.trim()||p.name.length>80||!Number.isInteger(p.minutes)||p.minutes<1||p.minutes>10000||!Number.isFinite(p.usd)||p.usd<0.01||p.usd>100000)return reply.code(400).send({error:'Each package needs a name, whole minutes and a positive USD price.'});packages.push({id:p.id,name:p.name.trim(),minutes:p.minutes,usd:Math.round(p.usd*100)/100})}
+  const packages=[];for(const original of defaults.packages){const p=b.packages.find(x=>x.id===original.id);if(!p||typeof p.name!=='string'||!p.name.trim()||p.name.length>80||!Number.isInteger(p.minutes)||p.minutes<1||p.minutes>10000||!Number.isFinite(p.ghs)||p.ghs<0.01||p.ghs>100000)return reply.code(400).send({error:'Each package needs a name, whole minutes and a positive GHS price.'});packages.push({id:p.id,name:p.name.trim(),minutes:p.minutes,ghs:Math.round(p.ghs*100)/100})}
   const videos={};for(const slot of Object.keys(defaults.videos)){const v=b.videos[slot];if(typeof v!=='string'||!(v===''||v==='/media/mycam-intro.mp4'||/^\/api\/site\/media\/[a-f0-9-]{36}\.(mp4|webm)$/.test(v)))return reply.code(400).send({error:'Upload a video using this editor.'});videos[slot]=v}
-  await persist({texts,packages,videos});return {ok:true};
+  await persist({texts,packages,videos,currency:'GHS',conversion:content.conversion||defaults.conversion});return {ok:true};
  });
  app.post('/api/site/videos',async(req,reply)=>{
   const part=await req.file();if(!part)return reply.code(400).send({error:'Choose an MP4 or WebM video.'});

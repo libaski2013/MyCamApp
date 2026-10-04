@@ -127,8 +127,8 @@
     },
     {
       "id": "text26",
-      "label": "Indicative prices for standard AI video. Voice, final GHS prices ",
-      "value": "Indicative prices for standard AI video. Voice, final GHS prices and purchase activation will be confirmed before checkout. No payment is collected today."
+      "label": "Estimated Ghana cedi prices for standard AI video. Voice pricing ",
+      "value": "Estimated Ghana cedi prices for standard AI video. Voice pricing and purchase activation will be confirmed before checkout. No payment is collected today."
     },
     {
       "id": "text34",
@@ -186,24 +186,30 @@
       "id": "starter",
       "name": "Starter",
       "minutes": 5,
-      "usd": 15
+      "ghs": 175.65
     },
     {
       "id": "creator",
       "name": "Creator",
       "minutes": 10,
-      "usd": 30
+      "ghs": 351.3
     },
     {
       "id": "extended",
       "name": "Extended",
       "minutes": 30,
-      "usd": 90
+      "ghs": 1053.9
     }
   ],
   "videos": {
     "hero": "/media/mycam-intro.mp4",
     "how": "",
     "features": ""
+  },
+  "currency": "GHS",
+  "conversion": {
+    "usdToGhs": 11.71,
+    "date": "2026-10-02",
+    "source": "Bank of Ghana interbank mid rate"
   }
 }

@@ -38,3 +38,8 @@ Text is rendered as plain text. Only admin may write or upload; videos selected
 for the website are public. Uploaded files remain on disk when replaced or hidden.
 Pricing changes update both the homepage and customer package catalog; they do
 not activate checkout or alter existing purchased balances (none exist yet).
+
+Prices are now stored and edited in Ghana cedis (`ghs`, currency `GHS`). Legacy
+USD package settings convert once at 11.71 GHS/USD, the Bank of Ghana mid rate
+for 2 October 2026. This is a fixed initial conversion, not automatic FX repricing.
+The admin can subsequently set any supported positive GHS amount directly.

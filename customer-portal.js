@@ -10,14 +10,14 @@ export async function registerCustomerPortal(app,{data,admin,catalogProvider}){
  const flags='; Path=/; HttpOnly; SameSite=Lax'+(process.env.APP_ORIGIN?.startsWith('https:')||process.env.RAILWAY_PROJECT_ID?'; Secure':'');
  function user(req){const token=(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('mycam_customer='))?.slice(15);const session=token&&store.sessions.find(s=>s.token===hash(token)&&s.expires>Date.now());return session&&store.users.find(u=>u.id===session.userId)}
  function publicUser(u){return {id:u.id,name:u.name,email:u.email,createdAt:u.createdAt,minutes:0,status:'registered',studioEnabled:false}}
- const catalog=[{id:'starter',minutes:5,usd:15},{id:'creator',minutes:10,usd:30},{id:'extended',minutes:30,usd:90}];
+ const catalog=[{id:'starter',minutes:5,ghs:175.65},{id:'creator',minutes:10,ghs:351.30},{id:'extended',minutes:30,ghs:1053.90}];
  const attempts=new Map();let registrations=0;
  app.addHook('preHandler',async(req,reply)=>{
   if(!req.url.startsWith('/api/customer/'))return;reply.header('Cache-Control','no-store');
   if(!['GET','HEAD'].includes(req.method)&&req.headers.origin&&process.env.APP_ORIGIN&&req.headers.origin!==new URL(process.env.APP_ORIGIN).origin)return reply.code(403).send({error:'Request origin is not allowed.'});
   if(req.url.endsWith('/signup')||req.url.endsWith('/login')){const current=Date.now();for(const [k,v] of attempts)if(v.until<current)attempts.delete(k);const key=req.ip,record=attempts.get(key)||{count:0,until:current+600000};record.count++;attempts.set(key,record);if(record.count>10)return reply.code(429).send({error:'Too many attempts. Please wait ten minutes.'})}
  });
- app.get('/api/customer/catalog',async()=>({packages:catalogProvider?catalogProvider():catalog,currency:'USD',estimated:true,checkoutEnabled:false,message:'Registration is open. Paid sessions are not on sale yet; no payment will be collected.'}));
+ app.get('/api/customer/catalog',async()=>({packages:catalogProvider?catalogProvider():catalog,currency:'GHS',estimated:true,checkoutEnabled:false,message:'Registration is open. Paid sessions are not on sale yet; no payment will be collected.'}));
  app.get('/api/customer/me',async req=>{const u=user(req);return {customer:u?publicUser(u):null,requests:u?store.requests.filter(r=>r.userId===u.id).map(r=>({id:r.id,packageId:r.packageId,createdAt:r.createdAt,status:r.status})):[]}});
  async function signIn(u,reply){store.sessions=store.sessions.filter(s=>s.expires>Date.now());const token=randomBytes(32).toString('base64url');store.sessions.push({token:hash(token),userId:u.id,expires:Date.now()+7*86400000});await save();reply.header('Set-Cookie','mycam_customer='+token+'; Max-Age=604800'+flags);return {customer:publicUser(u)}}
  app.post('/api/customer/signup',{bodyLimit:8192},async(req,reply)=>{
