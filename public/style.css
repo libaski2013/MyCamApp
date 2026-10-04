@@ -13,3 +13,16 @@
 .frame #aiVideo:not([hidden]){display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#101927;z-index:1}.ai-video-label{position:absolute;left:18px;bottom:18px;z-index:2;background:#061222de;padding:10px 14px;font-weight:700;font-size:16px}
 
 .transform-progress{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;padding:24px;text-align:center;background:#0a101bd9;font-size:18px;color:#d1f5ff}.transform-progress button{background:#087ca3}
+
+/* Task tabs keep the preview and selected controls together. */
+main{grid-template-columns:minmax(0,1.6fr) minmax(330px,1fr);align-items:start;gap:20px;padding-top:18px}
+.studio-tabs{grid-column:1/-1;display:flex;gap:7px;flex-wrap:wrap;position:sticky;top:0;z-index:10;padding:12px;background:#101927;border:1px solid #25354b;border-radius:14px;box-shadow:0 8px 25px #0003}
+.studio-tabs button{flex:1;white-space:nowrap;background:transparent;padding:12px 14px;border-color:transparent;color:#a9bdd3}
+.studio-tabs button[aria-selected=true]{background:#087ca3;border-color:#28b7df;color:white}
+.studio-tabs button:focus-visible{outline:2px solid #80e6ff;outline-offset:3px}
+.stage{position:sticky;top:94px;min-width:0}.studio-controls{min-width:0}.studio-controls .card{margin-bottom:14px}.studio-controls .card:last-child{margin-bottom:0}
+.card input:not([type=checkbox]):not([type=range]){max-width:100%}.card input[type=password],.card input[type=text],#voiceName{width:100%;padding:11px;margin-top:8px;background:#203149;color:#e9eef7;border:1px solid #3b4e68;border-radius:8px}
+.item{flex-wrap:wrap}.item span{flex:1;min-width:140px}.quickstart span{min-width:150px}footer{margin-top:8px}
+@media(min-width:1100px){.studio-controls{max-height:calc(100vh - 112px);overflow:auto;scrollbar-width:thin;padding-right:6px}}
+@media(max-width:1099px){.stage{top:150px}.studio-tabs button{flex:0 1 auto}}
+@media(max-width:900px){main{grid-template-columns:1fr;gap:14px;padding:14px}.stage{position:static}.studio-tabs{gap:5px;padding:8px}.studio-tabs button{flex:1 1 auto;padding:10px;font-size:12px}.studio-controls{max-height:none;overflow:visible}.quickstart{margin-bottom:12px}.topline h1{font-size:20px}}
