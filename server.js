@@ -1,3 +1,4 @@
+import {registerVoices} from './voice-service.js';
 import Fastify from 'fastify';
 import multipart from '@fastify/multipart';
 import staticPlugin from '@fastify/static';
@@ -134,6 +135,7 @@ for(const [kind,dir,key] of [['avatars',avatars,'avatars'],['recordings',recordi
  app.get(`/api/${kind}/:id/file`,async(req,reply)=>{const item=state[key].find(v=>v.id===req.params.id);if(!item||!safeId(item.id))return reply.code(404).send({error:'Not found'});const path=join(dir,item.id+(item.mime==='image/jpeg'?'.jpg':item.mime==='image/png'?'.png':item.mime==='image/webp'?'.webp':item.mime==='video/mp4'?'.mp4':'.webm'));try {const file=await open(path,'r');reply.header('Content-Type',item.mime).header('Content-Disposition',`inline; filename="${item.id}${extname(path)}"`).header('Cache-Control','private, max-age=3600');return reply.send(file.createReadStream());}catch{return reply.code(404).send({error:'Not found'});}});
  app.delete(`/api/${kind}/:id`,async(req,reply)=>{const index=state[key].findIndex(v=>v.id===req.params.id);if(index<0)return reply.code(404).send({error:'Not found'});const item=state[key].splice(index,1)[0];const ext=item.mime==='image/jpeg'?'.jpg':item.mime==='image/png'?'.png':item.mime==='image/webp'?'.webp':item.mime==='video/mp4'?'.mp4':'.webm';await unlink(join(dir,item.id+ext)).catch(()=>{});if(kind==='avatars'&&state.settings.selectedAvatarId===item.id)state.settings.selectedAvatarId='';await save();return {ok:true};});
 }
+await registerVoices(app,{data,recordings,state,save,authorized});
 await app.register(staticPlugin,{root:join(root,'public'),prefix:'/'});
 app.get('/',async(req,reply)=>reply.sendFile('index.html'));
 if(process.env.NODE_ENV!=='test') await app.listen({port:Number(process.env.PORT)||3000,host:process.env.HOST||(process.env.RAILWAY_PROJECT_ID||process.env.RAILWAY_ENVIRONMENT_ID?'::':'127.0.0.1')});
