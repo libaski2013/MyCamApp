@@ -4,6 +4,7 @@ import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {spawn} from 'node:child_process';
 import ffmpeg from 'ffmpeg-static';
+import {registerLiveVoices} from './live-voice-service.js';
 
 export function runMedia(args,timeout=120000){return new Promise((resolve,reject)=>{
  const proc=spawn(process.env.FFMPEG_PATH||ffmpeg,args,{stdio:['ignore','ignore','pipe']});let error='';
@@ -27,7 +28,7 @@ export async function registerVoices(app,{data,recordings,state,authorized,media
  await persist();await rm(work,{recursive:true,force:true});await mkdir(work,{recursive:true});
  const sweep=setInterval(()=>cleanup().catch(()=>{}),60000);sweep.unref();app.addHook('onClose',async()=>clearInterval(sweep));
  app.addHook('preHandler',async(req,reply)=>{if(!req.url.startsWith('/api/voice/'))return;reply.header('Cache-Control','no-store');if(!authorized(req))return reply.code(401).send({error:'Sign in to the studio first.'});if(!enabled())return reply.code(503).send({error:'Set ELEVENLABS_API_KEY in Railway to enable voice cloning.'})});
- app.get('/api/voice/capabilities',async()=>({enabled:enabled(),scope:'recorded-video',maxVideoSeconds:300}));
+ app.get('/api/voice/capabilities',async()=>({enabled:enabled(),scope:'recorded-video-and-buffered-live',maxVideoSeconds:300,liveChunkSeconds:2,liveMaxSeconds:300}));
  app.get('/api/voice/library',async()=>{await cleanup();return {voices:store.voices.map(publicVoice),jobs:store.jobs.slice(-30).reverse().map(publicJob)}});
  let cloning=false;
  app.post('/api/voice/library',async(req,reply)=>{
@@ -81,5 +82,13 @@ export async function registerVoices(app,{data,recordings,state,authorized,media
  app.get('/api/voice/jobs/:id',async(req,reply)=>{const j=store.jobs.find(j=>j.id===req.params.id);return j?publicJob(j):reply.code(404).send({error:'Job not found.'})});
  app.get('/api/voice/jobs/:id/file',async(req,reply)=>{const j=store.jobs.find(j=>j.id===req.params.id);if(!j||j.status!=='complete')return reply.code(404).send({error:'Video is not ready.'});return reply.header('Content-Type','video/mp4').header('Content-Disposition','attachment; filename="mycam-voice-'+j.id+'.mp4"').send(createReadStream(join(outputs,j.id+'.mp4')))});
  app.delete('/api/voice/jobs/:id',async(req,reply)=>{const j=store.jobs.find(j=>j.id===req.params.id);if(!j)return reply.code(404).send({error:'Job not found.'});if(!['complete','failed'].includes(j.status))return reply.code(409).send({error:'Wait for conversion to finish.'});await rm(join(outputs,j.id+'.mp4'),{force:true});store.jobs=store.jobs.filter(x=>x.id!==j.id);await persist();return {removed:true}});
+ await registerLiveVoices(app,{voices:()=>store.voices,persist,removeVoice,convertAudio:async(v,bytes,signal)=>{
+  const form=new FormData();form.append('audio',new Blob([bytes],{type:'audio/wav'}),'segment.wav');form.append('model_id',process.env.ELEVENLABS_VOICE_MODEL||'eleven_multilingual_sts_v2');
+  const response=await fetch('https://api.elevenlabs.io/v1/speech-to-speech/'+encodeURIComponent(v.remote)+'?output_format=mp3_44100_128',{method:'POST',headers:{'xi-api-key':process.env.ELEVENLABS_API_KEY},body:form,signal:AbortSignal.any([signal,AbortSignal.timeout(25000)])});
+  if(!response.ok)throw Error(response.status===401||response.status===403?'ElevenLabs access denied. Check voice verification and API key permissions.':response.status===402||response.status===429?'ElevenLabs credits or usage limit reached.':'Live voice conversion failed at ElevenLabs. Stop and retry.');
+  const reader=response.body.getReader();const chunks=[];let size=0;
+  try{while(true){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>2*1024*1024)throw Error('Converted speech exceeded the segment limit.');chunks.push(value)}}finally{await reader.cancel().catch(()=>{})}
+  return Buffer.concat(chunks);
+ }});
  await cleanup();
 }

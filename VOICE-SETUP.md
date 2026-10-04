@@ -1,6 +1,6 @@
 # Recorded-video voice cloning
 
-The studio can create a voice from an authorized speech sample and replace speech in an existing MyCam recording. This is recorded-video conversion, not a live microphone or automatic lip animation.
+The studio can create a voice from an authorized speech sample and replace speech in an existing MyCam recording. Recorded-video conversion is available alongside a buffered live voice beta. Neither mode generates automatic lip animation.
 
 ## Railway configuration
 
@@ -29,3 +29,7 @@ Voice quality depends on the sample and source recording. Speech-to-speech chang
 ## Verification
 
 `npm test` includes real FFmpeg extraction and MP4 creation with a mocked voice provider, admin authentication checks, temporary provider-deletion retry and output deletion. Real voice quality and account access must be tested after configuring a valid ElevenLabs key.
+
+## Live voice beta
+
+Use the selected library voice with **Start selected voice live**. See [OBS-SETUP.md](OBS-SETUP.md) for microphone routing and synchronization instructions. Temporary voices are deleted after one live session. Existing `ELEVENLABS_API_KEY` enables both modes; no new Railway key is required. Two-second speech segments add buffering and provider latency, and do not guarantee precise mouth synchronization.
