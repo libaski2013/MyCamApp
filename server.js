@@ -1,3 +1,4 @@
+import {registerCustomerPortal} from './customer-portal.js';
 import {registerVoices} from './voice-service.js';
 import Fastify from 'fastify';
 import multipart from '@fastify/multipart';
@@ -137,6 +138,7 @@ for(const [kind,dir,key] of [['avatars',avatars,'avatars'],['recordings',recordi
 }
 await registerVoices(app,{data,recordings,state,save,authorized});
 await app.register(staticPlugin,{root:join(root,'public'),prefix:'/'});
+await registerCustomerPortal(app,{data,admin:authorized});
 app.get('/',async(req,reply)=>reply.sendFile('index.html'));
 if(process.env.NODE_ENV!=='test') await app.listen({port:Number(process.env.PORT)||3000,host:process.env.HOST||(process.env.RAILWAY_PROJECT_ID||process.env.RAILWAY_ENVIRONMENT_ID?'::':'127.0.0.1')});
 export default app;
