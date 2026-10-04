@@ -1,0 +1,209 @@
+{
+  "texts": [
+    {
+      "id": "text1",
+      "label": "YOUR MOVEMENT. YOUR CHARACTER.",
+      "value": "YOUR MOVEMENT. YOUR CHARACTER."
+    },
+    {
+      "id": "text2",
+      "label": "Bring your on-screen self to life.",
+      "value": "Bring your on-screen self to life."
+    },
+    {
+      "id": "text3",
+      "label": "Choose a photo. Move naturally. Create a live AI avatar with a se",
+      "value": "Choose a photo. Move naturally. Create a live AI avatar with a selected voice, record your moments and prepare your video-call output."
+    },
+    {
+      "id": "text4",
+      "label": "Customer registration is open \u00b7 Paid sessions are preparing for l",
+      "value": "Customer registration is open \u00b7 Paid sessions are preparing for launch"
+    },
+    {
+      "id": "text5",
+      "label": "FROM PHOTO TO PRESENCE",
+      "value": "FROM PHOTO TO PRESENCE"
+    },
+    {
+      "id": "text6",
+      "label": "A new way to show up.",
+      "value": "A new way to show up."
+    },
+    {
+      "id": "text7",
+      "label": "Choose your character",
+      "value": "Choose your character"
+    },
+    {
+      "id": "text8",
+      "label": "Upload a photo you own or have permission to use. It supplies the",
+      "value": "Upload a photo you own or have permission to use. It supplies the reference appearance."
+    },
+    {
+      "id": "text9",
+      "label": "Move and speak",
+      "value": "Move and speak"
+    },
+    {
+      "id": "text10",
+      "label": "Your camera supplies expressions and movements. Choose an authori",
+      "value": "Your camera supplies expressions and movements. Choose an authorized voice for recordings or buffered live output."
+    },
+    {
+      "id": "text11",
+      "label": "Record or connect",
+      "value": "Record or connect"
+    },
+    {
+      "id": "text12",
+      "label": "Save your video, or route compatible desktop calls through OBS an",
+      "value": "Save your video, or route compatible desktop calls through OBS and a virtual audio cable."
+    },
+    {
+      "id": "text13",
+      "label": "ONE CREATIVE STUDIO",
+      "value": "ONE CREATIVE STUDIO"
+    },
+    {
+      "id": "text14",
+      "label": "Your tools, together.",
+      "value": "Your tools, together."
+    },
+    {
+      "id": "text15",
+      "label": "Keep your real camera preview nearby while working with the trans",
+      "value": "Keep your real camera preview nearby while working with the transformed output."
+    },
+    {
+      "id": "text16",
+      "label": "Live AI character",
+      "value": "Live AI character"
+    },
+    {
+      "id": "text17",
+      "label": "Use a reference photo and live movements to drive the video trans",
+      "value": "Use a reference photo and live movements to drive the video transformation."
+    },
+    {
+      "id": "text18",
+      "label": "Your selected voice",
+      "value": "Your selected voice"
+    },
+    {
+      "id": "text19",
+      "label": "Save an authorized voice for reuse or use a temporary voice. Live",
+      "value": "Save an authorized voice for reuse or use a temporary voice. Live voice beta buffers speech and video."
+    },
+    {
+      "id": "text20",
+      "label": "Record and download",
+      "value": "Record and download"
+    },
+    {
+      "id": "text21",
+      "label": "Capture your composition, then keep the resulting video for your ",
+      "value": "Capture your composition, then keep the resulting video for your creative projects."
+    },
+    {
+      "id": "text22",
+      "label": "Call-ready output",
+      "value": "Call-ready output"
+    },
+    {
+      "id": "text23",
+      "label": "Connect desktop applications that support OBS Virtual Camera and ",
+      "value": "Connect desktop applications that support OBS Virtual Camera and a virtual microphone."
+    },
+    {
+      "id": "text24",
+      "label": "START SMALL. CREATE MORE.",
+      "value": "START SMALL. CREATE MORE."
+    },
+    {
+      "id": "text25",
+      "label": "Choose your minute pack.",
+      "value": "Choose your minute pack."
+    },
+    {
+      "id": "text26",
+      "label": "Indicative prices for standard AI video. Voice, final GHS prices ",
+      "value": "Indicative prices for standard AI video. Voice, final GHS prices and purchase activation will be confirmed before checkout. No payment is collected today."
+    },
+    {
+      "id": "text34",
+      "label": "Before you begin.",
+      "value": "Before you begin."
+    },
+    {
+      "id": "text35",
+      "label": "Can I use MyCam directly in WhatsApp or Google Meet?",
+      "value": "Can I use MyCam directly in WhatsApp or Google Meet?"
+    },
+    {
+      "id": "text36",
+      "label": "Compatible desktop applications can use OBS Virtual Camera for vi",
+      "value": "Compatible desktop applications can use OBS Virtual Camera for video and a virtual audio cable for voice. Support depends on the app; mobile calls are not currently supported through this workflow."
+    },
+    {
+      "id": "text37",
+      "label": "Is live voice instant?",
+      "value": "Is live voice instant?"
+    },
+    {
+      "id": "text38",
+      "label": "The current beta processes two-second speech segments, with sever",
+      "value": "The current beta processes two-second speech segments, with several seconds of delay and approximate video synchronization. Exact lip matching is not guaranteed."
+    },
+    {
+      "id": "text39",
+      "label": "Can I buy minutes now?",
+      "value": "Can I buy minutes now?"
+    },
+    {
+      "id": "text40",
+      "label": "Registration and package-interest requests are available. Checkou",
+      "value": "Registration and package-interest requests are available. Checkout remains closed while secure customer access and payment verification are completed. Your portal will show launch status."
+    },
+    {
+      "id": "text41",
+      "label": "What photos and voices can I use?",
+      "value": "What photos and voices can I use?"
+    },
+    {
+      "id": "text42",
+      "label": "Use your own likeness and voice or obtain the owner\u2019s permission.",
+      "value": "Use your own likeness and voice or obtain the owner\u2019s permission. Tell your audience when you use an AI avatar."
+    },
+    {
+      "id": "text43",
+      "label": "Your next creative session starts here.",
+      "value": "Your next creative session starts here."
+    }
+  ],
+  "packages": [
+    {
+      "id": "starter",
+      "name": "Starter",
+      "minutes": 5,
+      "usd": 15
+    },
+    {
+      "id": "creator",
+      "name": "Creator",
+      "minutes": 10,
+      "usd": 30
+    },
+    {
+      "id": "extended",
+      "name": "Extended",
+      "minutes": 30,
+      "usd": 90
+    }
+  ],
+  "videos": {
+    "hero": "/media/mycam-intro.mp4",
+    "how": "",
+    "features": ""
+  }
+}

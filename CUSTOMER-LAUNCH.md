@@ -22,3 +22,19 @@ Keep `STUDIO_ACCESS_KEY`, Decart and ElevenLabs secrets server-side. Configure `
 ## Test
 
 `npm test` verifies password/session privacy, signup/login/logout, package deduplication, disabled checkout, separation from admin studio, voice conversion and live-session cleanup. Actual camera, voice quality and provider performance require physical-device tests.
+
+## Website administration
+Open `/admin` from the public home's Admin login link. Use the existing
+`STUDIO_ACCESS_KEY` to sign in; the existing admin session is reused. Edit
+section text, import `.txt` text per section, update package names/minutes/USD
+prices, and upload MP4/WebM videos for the hero, how-it-works and features.
+Click Publish changes to apply staged edits. JSON export/import backs up the
+configuration; uploaded video bytes are not included in the JSON backup.
+
+Configuration is stored at `DATA_DIR/site-content.json`, and uploaded videos
+at `DATA_DIR/site-media/`. A persistent Railway volume mounted at DATA_DIR and
+one service replica are required to retain edits and media across deployments.
+Text is rendered as plain text. Only admin may write or upload; videos selected
+for the website are public. Uploaded files remain on disk when replaced or hidden.
+Pricing changes update both the homepage and customer package catalog; they do
+not activate checkout or alter existing purchased balances (none exist yet).
